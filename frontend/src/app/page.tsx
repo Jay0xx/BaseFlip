@@ -73,12 +73,14 @@ export default function Home() {
     pollingInterval: 1000,
   });
 
-  // 4. Fetch Historical Events
+    // 4. Fetch Historical Events (Safer range for faster loading)
   useEffect(() => {
     async function fetchPastEvents() {
       if (!publicClient) return;
       try {
         const currentBlock = await publicClient.getBlockNumber();
+        const startBlock = currentBlock - BigInt(20000) > BigInt(0) ? currentBlock - BigInt(20000) : BigInt(0);
+        
         const logs = await publicClient.getLogs({
           address: BASEFLIP_ADDRESS,
           event: {
@@ -94,7 +96,7 @@ export default function Home() {
             name: "FlipOutcome",
             type: "event"
           },
-          fromBlock: currentBlock - BigInt(50000) > BigInt(0) ? currentBlock - BigInt(50000) : BigInt(0),
+          fromBlock: startBlock,
           toBlock: currentBlock,
         });
 
@@ -127,7 +129,6 @@ export default function Home() {
     setCoinOutcome(resultIcon);
     setIsFlipping(false);
 
-    // Refetch in background so it doesn't block UI transition
     setTimeout(() => refetchBalance(), 0);
     setTimeout(() => {
       setLastResult(resultData);
@@ -145,7 +146,7 @@ export default function Home() {
     }, 1200);
   };
 
-  // 6. Immediate Result Parse (from Receipt) - Eliminates Event Lag
+  // 6. Immediate Result Parse (from Receipt)
   useEffect(() => {
     if (isTxSuccess && receipt && isFlipping) {
       for (const log of receipt.logs) {
@@ -173,7 +174,7 @@ export default function Home() {
     }
   }, [isTxSuccess, receipt, address, isFlipping]);
 
-  // 7. Watch for Live Events (Global History + Fast Path for Result)
+  // 7. Watch for Live Events (Global History + SECURE Fast Path)
   useWatchContractEvent({
     address: BASEFLIP_ADDRESS,
     abi: baseFlipABI,
@@ -192,8 +193,12 @@ export default function Home() {
 
       setHistory(prev => [...newFlips.reverse(), ...prev].slice(0, 1000));
 
-      // FAST PATH: If the event arrives before the receipt is processed, reveal immediately
-      const userLog = newFlips.find(log => log.player.toLowerCase() === address?.toLowerCase());
+      // SECURITY: Only reveal if the hash matches your current transaction
+      const userLog = newFlips.find(log => 
+          log.player.toLowerCase() === address?.toLowerCase() && 
+          (hash ? log.txHash === hash : false)
+      );
+
       if (userLog && isFlipping) {
         settleGame(
           userLog.won,
