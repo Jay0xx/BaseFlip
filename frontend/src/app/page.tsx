@@ -205,11 +205,36 @@ export default function Home() {
     },
   });
 
-  const handleAction = async () => {
+   const handleAction = async () => {
     if (!isConnected) return;
 
+    // Enhanced chain validation with auto-add fallback
     if (chain?.id !== baseSepolia.id) {
-      switchChain({ chainId: baseSepolia.id });
+      try {
+        await switchChain({ chainId: baseSepolia.id });
+      } catch (switchError: any) {
+        // If switch fails, try to add the network (for wallets like Zerion/OKX)
+        if (switchError?.code === 4902 || switchError?.message?.includes('Unrecognized chain')) {
+          try {
+            const { addBaseSepoliaToWallet } = await import('@/constants');
+            const added = await addBaseSepoliaToWallet();
+            if (added) {
+              // Try switching again after adding
+              await switchChain({ chainId: baseSepolia.id });
+            } else {
+              alert('⚠️ Please manually add Base Sepolia network to your wallet.\n\nChain ID: 84532\nRPC: https://sepolia.base.org');
+              return;
+            }
+          } catch (addError) {
+            console.error('Failed to add network:', addError);
+            alert('⚠️ Please manually add Base Sepolia network to your wallet.');
+            return;
+          }
+        } else {
+          console.error('Chain switch error:', switchError);
+          return;
+        }
+      }
       return;
     }
 
@@ -234,16 +259,47 @@ export default function Home() {
     arcadeAudio?.playFlip();
 
     try {
-      writeContract({
+      // Enhanced transaction with explicit gas estimation for problematic wallets
+      const txConfig: any = {
         address: BASEFLIP_ADDRESS,
         abi: baseFlipABI,
         functionName: 'flip',
         args: [selectedSide],
         value: amountInWei,
-      });
-    } catch (err) {
-      console.error("Write error:", err);
+      };
+
+      // Add manual gas limit for wallets that fail auto-estimation (OKX, etc.)
+      try {
+        if (publicClient) {
+          const gasEstimate = await publicClient.estimateContractGas({
+            ...txConfig,
+            account: address,
+          });
+          // Add 20% buffer for safety
+          txConfig.gas = (gasEstimate * BigInt(120)) / BigInt(100);
+        }
+      } catch (gasError) {
+        console.warn('Gas estimation failed, using fallback:', gasError);
+        // Fallback gas limit (flip function is simple, 150k is safe)
+        txConfig.gas = BigInt(150000);
+      }
+
+      writeContract(txConfig);
+    } catch (err: any) {
+      console.error("Transaction error:", err);
       setIsFlipping(false);
+      
+      // User-friendly error messages
+      let errorMsg = "Transaction failed. Please try again.";
+      if (err?.message?.includes('insufficient funds')) {
+        errorMsg = "⚠️ Insufficient ETH balance for this transaction.";
+      } else if (err?.message?.includes('user rejected')) {
+        errorMsg = "Transaction cancelled.";
+      } else if (err?.code === -32000 || err?.message?.includes('rpc')) {
+        errorMsg = "⚠️ RPC Error. Please check your wallet's network settings or try again.";
+      }
+      
+      alert(errorMsg);
     }
   };
 
