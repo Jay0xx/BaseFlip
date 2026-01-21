@@ -176,3 +176,40 @@ h6 {
   animation: spin 2s linear infinite;
   transform-style: preserve-3d;
 }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Reduce CRT effect intensity on mobile for performance */
+  .crt-overlay {
+    opacity: 0.3;
+  }
+
+  .scanline {
+    opacity: 0.02;
+  }
+
+  /* Make text more readable on small screens */
+  .font-arcade {
+    font-size: clamp(8px, 2vw, 16px);
+  }
+
+  /* Improve touch targets */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing on mobile */
+  .retro-panel {
+    padding: 1rem !important;
+  }
+}
