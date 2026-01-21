@@ -204,8 +204,8 @@ export default function Home() {
       }
     },
   });
-
-   const handleAction = async () => {
+  
+     const handleAction = async () => {
     if (!isConnected) return;
 
     // Enhanced chain validation with auto-add fallback
@@ -219,7 +219,6 @@ export default function Home() {
             const { addBaseSepoliaToWallet } = await import('@/constants');
             const added = await addBaseSepoliaToWallet();
             if (added) {
-              // Try switching again after adding
               await switchChain({ chainId: baseSepolia.id });
             } else {
               alert('⚠️ Please manually add Base Sepolia network to your wallet.\n\nChain ID: 84532\nRPC: https://sepolia.base.org');
@@ -302,7 +301,6 @@ export default function Home() {
       alert(errorMsg);
     }
   };
-
   const handleWithdraw = async (withdrawAmount: string) => {
     if (!isOwner || !withdrawAmount) return;
     try {
