@@ -14,7 +14,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 // Using a placeholder project ID - user should ideally provide one from WalletConnect Cloud
 const config = getDefaultConfig({
     appName: 'BaseFlip',
-    projectId: '956402fc66c98ea98a96440266fc0319', // Generic placeholder for dev
+    projectId: 'f5221699320f84dcfe53a3f4059ed1b6', // Generic placeholder for dev
     chains: [baseSepolia],
     ssr: true,
 });
@@ -38,3 +38,4 @@ export function Providers({ children }: { children: ReactNode }) {
         </WagmiProvider>
     );
 }
+
